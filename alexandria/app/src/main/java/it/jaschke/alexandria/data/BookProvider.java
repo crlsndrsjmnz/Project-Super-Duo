@@ -8,7 +8,6 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
-import android.util.Log;
 
 /**
  * Created by saj on 24/12/14.
@@ -28,9 +27,6 @@ public class BookProvider extends ContentProvider {
     private static final int BOOK_FULLDETAIL = 501;
 
     private static final UriMatcher uriMatcher = buildUriMatcher();
-
-    private DbHelper dbHelper;
-
     private static final SQLiteQueryBuilder bookFull;
 
     static{
@@ -41,6 +37,7 @@ public class BookProvider extends ContentProvider {
                 " LEFT OUTER JOIN " +  AlexandriaContract.CategoryEntry.TABLE_NAME + " USING (" +AlexandriaContract.BookEntry._ID + ")");
     }
 
+    private DbHelper dbHelper;
 
     private static UriMatcher buildUriMatcher() {
 
@@ -65,7 +62,6 @@ public class BookProvider extends ContentProvider {
     public boolean onCreate() {
         dbHelper = new DbHelper(getContext());
         return true;
-
     }
 
     @Override
