@@ -24,6 +24,7 @@ import java.util.Vector;
 
 import barqsoft.footballscores.R;
 import barqsoft.footballscores.data.DatabaseContract;
+import barqsoft.footballscores.widget.DetailWidgetProvider;
 
 /**
  * Created by yehya khaled on 3/2/2015.
@@ -221,15 +222,15 @@ public class myFetchService extends IntentService {
                     Away_goals = match_data.getJSONObject(RESULT).getString(AWAY_GOALS);
                     match_day = match_data.getString(MATCH_DAY);
                     ContentValues match_values = new ContentValues();
-                    match_values.put(DatabaseContract.scores_table.MATCH_ID, match_id);
-                    match_values.put(DatabaseContract.scores_table.DATE_COL, mDate);
-                    match_values.put(DatabaseContract.scores_table.TIME_COL, mTime);
-                    match_values.put(DatabaseContract.scores_table.HOME_COL, Home);
-                    match_values.put(DatabaseContract.scores_table.AWAY_COL, Away);
-                    match_values.put(DatabaseContract.scores_table.HOME_GOALS_COL, Home_goals);
-                    match_values.put(DatabaseContract.scores_table.AWAY_GOALS_COL, Away_goals);
-                    match_values.put(DatabaseContract.scores_table.LEAGUE_COL, League);
-                    match_values.put(DatabaseContract.scores_table.MATCH_DAY, match_day);
+                    match_values.put(DatabaseContract.FixtureEntry.MATCH_ID, match_id);
+                    match_values.put(DatabaseContract.FixtureEntry.DATE_COL, mDate);
+                    match_values.put(DatabaseContract.FixtureEntry.TIME_COL, mTime);
+                    match_values.put(DatabaseContract.FixtureEntry.HOME_COL, Home);
+                    match_values.put(DatabaseContract.FixtureEntry.AWAY_COL, Away);
+                    match_values.put(DatabaseContract.FixtureEntry.HOME_GOALS_COL, Home_goals);
+                    match_values.put(DatabaseContract.FixtureEntry.AWAY_GOALS_COL, Away_goals);
+                    match_values.put(DatabaseContract.FixtureEntry.LEAGUE_COL, League);
+                    match_values.put(DatabaseContract.FixtureEntry.MATCH_DAY, match_day);
 
                     values.add(match_values);
                 }
@@ -239,6 +240,11 @@ public class myFetchService extends IntentService {
             values.toArray(insert_data);
             inserted_data = mContext.getContentResolver().bulkInsert(
                     DatabaseContract.BASE_CONTENT_URI, insert_data);
+
+            if (inserted_data > 0) {
+                Intent intent = new Intent(DetailWidgetProvider.ACTION_DATA_UPDATED);
+                mContext.sendBroadcast(intent);
+            }
 
         } catch (JSONException e) {
             Log.e(LOG_TAG, e.getMessage());
