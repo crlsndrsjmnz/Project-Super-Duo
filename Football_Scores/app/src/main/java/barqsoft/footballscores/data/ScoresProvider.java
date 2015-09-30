@@ -7,11 +7,14 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
+import android.util.Log;
 
 /**
  * Created by yehya khaled on 2/25/2015.
  */
 public class ScoresProvider extends ContentProvider {
+
+    public static final String LOG_TAG = ScoresProvider.class.getSimpleName();
 
     private static final int FIXTURES = 100;
     private static final int FIXTURES_WITH_ID = 101;
@@ -57,12 +60,12 @@ public class ScoresProvider extends ContentProvider {
                 FIXTURES_WITH_DATE);
 
         sUriMatcher.addURI(DatabaseContract.CONTENT_AUTHORITY,
-                DatabaseContract.LEAGUE_PATH,
-                FIXTURES_WITH_DATE);
+                DatabaseContract.LEAGUE_PATH + "/#",
+                LEAGUES_WITH_ID);
 
         sUriMatcher.addURI(DatabaseContract.CONTENT_AUTHORITY,
-                DatabaseContract.TEAM_PATH,
-                FIXTURES_WITH_DATE);
+                DatabaseContract.TEAM_PATH + "/#",
+                TEAMS_WITH_ID);
 
         return sUriMatcher;
     }
@@ -158,14 +161,22 @@ public class ScoresProvider extends ContentProvider {
     public int bulkInsert(Uri uri, ContentValues[] values) {
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
 
+        Log.d(LOG_TAG, ";;;;;;;;;;;;;;;;;;;;;;;;;;; ScoresProvider:bulkInsert Uri: " + uri.toString() + " - sUriMatcher: " + sUriMatcher.match(uri));
+
         switch (sUriMatcher.match(uri)) {
             case FIXTURES:
+
+                Log.d(LOG_TAG, ";;;;;;;;;;;;;;;;;;;;;;;;;;; ScoresProvider:bulkInsert FIXTURES : " + FIXTURES);
+
                 db.beginTransaction();
                 int returncount = 0;
                 try {
                     for (ContentValues value : values) {
                         long _id = db.insertWithOnConflict(DatabaseContract.FixtureEntry.TABLE_NAME, null, value,
                                 SQLiteDatabase.CONFLICT_REPLACE);
+
+                        Log.d(LOG_TAG, ";;;;;;;;;;;;;;;;;;;;;;;;;;; ScoresProvider:bulkInsert id: " + _id + " - " + value.get(DatabaseContract.FixtureEntry.MATCH_ID));
+
                         if (_id != -1) {
                             returncount++;
                         }

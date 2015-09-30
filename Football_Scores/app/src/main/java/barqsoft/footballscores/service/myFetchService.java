@@ -4,6 +4,7 @@ import android.app.IntentService;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
 import android.net.Uri;
 import android.util.Log;
 
@@ -31,6 +32,15 @@ import barqsoft.footballscores.widget.DetailWidgetProvider;
  */
 public class myFetchService extends IntentService {
     public static final String LOG_TAG = "myFetchService";
+    private static final String[] TEAM_COLUMNS = {
+            DatabaseContract.TeamEntry._ID,
+            DatabaseContract.TeamEntry.TEAM_ID,
+            DatabaseContract.TeamEntry.NAME_COL,
+            DatabaseContract.TeamEntry.ABBREVIATION_COL,
+            DatabaseContract.TeamEntry.CREST_URL_COL
+    };
+    private Context mContext;
+
 
     public myFetchService() {
         super("myFetchService");
@@ -38,6 +48,8 @@ public class myFetchService extends IntentService {
 
     @Override
     protected void onHandleIntent(Intent intent) {
+        mContext = getApplicationContext();
+
         getData("n2");
         getData("p2");
 
@@ -46,13 +58,20 @@ public class myFetchService extends IntentService {
 
     private void getData(String timeFrame) {
         //Creating fetch URL
+        final String BASE_URL = "http://api.football-data.org/alpha/fixtures/149340"; //Base URL
+        Uri fetch_build = Uri.parse(BASE_URL)
+                .buildUpon()
+                .build();
+
+        Log.d(LOG_TAG, "::::::::::::::::: myFetchService:getData " + fetch_build.toString());
+        /*
         final String BASE_URL = "http://api.football-data.org/alpha/fixtures"; //Base URL
         final String QUERY_TIME_FRAME = "timeFrame"; //Time Frame parameter to determine days
         //final String QUERY_MATCH_DAY = "matchday";
 
         Uri fetch_build = Uri.parse(BASE_URL).buildUpon().
                 appendQueryParameter(QUERY_TIME_FRAME, timeFrame).build();
-
+        */
         HttpURLConnection m_connection = null;
         BufferedReader reader = null;
         String JSON_data = null;
@@ -106,12 +125,12 @@ public class myFetchService extends IntentService {
                 if (matches.length() == 0) {
                     //if there is no data, call the function on dummy data
                     //this is expected behavior during the off season.
-                    processJSONdata(getString(R.string.dummy_data), getApplicationContext(), false);
+                    processJSONdata(getString(R.string.dummy_data), false);
                     return;
                 }
 
 
-                processJSONdata(JSON_data, getApplicationContext(), true);
+                processJSONdata(JSON_data, true);
             } else {
                 //Could not Connect
                 Log.d(LOG_TAG, "Could not connect to server.");
@@ -121,7 +140,10 @@ public class myFetchService extends IntentService {
         }
     }
 
-    private void processJSONdata(String JSONdata, Context mContext, boolean isReal) {
+    private void processJSONdata(String JSONdata, boolean isReal) {
+
+        Log.d(LOG_TAG, "::::::::::::::::: myFetchService:processJSONdata");
+
         //JSON data
         // This set of league codes is for the 2015/2016 season. In fall of 2016, they will need to
         // be updated. Feel free to use the codes
@@ -133,12 +155,14 @@ public class myFetchService extends IntentService {
         final String PRIMERA_DIVISION = "399";
         final String SEGUNDA_DIVISION = "400";
         final String SERIE_A = "401";
-        final String PRIMERA_LIGA = "402";
+        final String PRIMEIRA_LIGA = "402";
         final String Bundesliga3 = "403";
         final String EREDIVISIE = "404";
+        final String CHAMPIONS_LEAGUE = "405";
 
 
         final String SEASON_LINK = "http://api.football-data.org/alpha/soccerseasons/";
+        final String TEAM_LINK = "http://api.football-data.org/alpha/teams/";
         final String MATCH_LINK = "http://api.football-data.org/alpha/fixtures/";
         final String FIXTURES = "fixtures";
         final String LINKS = "_links";
@@ -146,7 +170,9 @@ public class myFetchService extends IntentService {
         final String SELF = "self";
         final String MATCH_DATE = "date";
         final String HOME_TEAM = "homeTeamName";
+        final String HOME_TEAM_LINK = "homeTeam";
         final String AWAY_TEAM = "awayTeamName";
+        final String AWAY_TEAM_LINK = "awayTeam";
         final String RESULT = "result";
         final String HOME_GOALS = "goalsHomeTeam";
         final String AWAY_GOALS = "goalsAwayTeam";
@@ -163,10 +189,8 @@ public class myFetchService extends IntentService {
         String match_id = null;
         String match_day = null;
 
-
         try {
             JSONArray matches = new JSONObject(JSONdata).getJSONArray(FIXTURES);
-
 
             //ContentValues to be inserted
             Vector<ContentValues> values = new Vector<ContentValues>(matches.length());
@@ -184,7 +208,8 @@ public class myFetchService extends IntentService {
                         League.equals(SERIE_A) ||
                         League.equals(BUNDESLIGA1) ||
                         League.equals(BUNDESLIGA2) ||
-                        League.equals(PRIMERA_DIVISION)) {
+                        League.equals(PRIMERA_DIVISION) ||
+                        League.equals(CHAMPIONS_LEAGUE)) {
                     match_id = match_data.getJSONObject(LINKS).getJSONObject(SELF).
                             getString("href");
                     match_id = match_id.replace(MATCH_LINK, "");
@@ -225,31 +250,200 @@ public class myFetchService extends IntentService {
                     match_values.put(DatabaseContract.FixtureEntry.MATCH_ID, match_id);
                     match_values.put(DatabaseContract.FixtureEntry.DATE_COL, mDate);
                     match_values.put(DatabaseContract.FixtureEntry.TIME_COL, mTime);
+
                     match_values.put(DatabaseContract.FixtureEntry.HOME_COL, Home);
+                    Home = match_data.getJSONObject(LINKS).getJSONObject(HOME_TEAM_LINK).
+                            getString("href");
+                    Home = Home.replace(TEAM_LINK, "");
+                    checkTeamData(Home);
+
                     match_values.put(DatabaseContract.FixtureEntry.AWAY_COL, Away);
+                    Away = match_data.getJSONObject(LINKS).getJSONObject(AWAY_TEAM_LINK).
+                            getString("href");
+                    Away = Away.replace(TEAM_LINK, "");
+                    checkTeamData(Away);
+
                     match_values.put(DatabaseContract.FixtureEntry.HOME_GOALS_COL, Home_goals);
                     match_values.put(DatabaseContract.FixtureEntry.AWAY_GOALS_COL, Away_goals);
+
                     match_values.put(DatabaseContract.FixtureEntry.LEAGUE_COL, League);
+                    checkLeagueData(League);
+
                     match_values.put(DatabaseContract.FixtureEntry.MATCH_DAY, match_day);
 
                     values.add(match_values);
                 }
             }
-            int inserted_data = 0;
-            ContentValues[] insert_data = new ContentValues[values.size()];
-            values.toArray(insert_data);
-            inserted_data = mContext.getContentResolver().bulkInsert(
-                    DatabaseContract.BASE_CONTENT_URI, insert_data);
 
-            if (inserted_data > 0) {
-                Intent intent = new Intent(DetailWidgetProvider.ACTION_DATA_UPDATED);
-                mContext.sendBroadcast(intent);
+            if (values.size() > 0) {
+                int inserted_data = 0;
+                ContentValues[] insert_data = new ContentValues[values.size()];
+                values.toArray(insert_data);
+                inserted_data = mContext.getContentResolver().bulkInsert(
+                        DatabaseContract.FixtureEntry.CONTENT_URI, insert_data);
+
+                if (inserted_data > 0) {
+                    Intent intent = new Intent(DetailWidgetProvider.ACTION_DATA_UPDATED);
+                    mContext.sendBroadcast(intent);
+                }
+            } else {
+                Log.e(LOG_TAG, "No fixtures fetched");
             }
 
         } catch (JSONException e) {
             Log.e(LOG_TAG, e.getMessage());
         }
+    }
 
+    private void checkTeamData(String teamId) {
+
+        Log.d(LOG_TAG, ":::::::::::::::::::::::::::::::::: myFetchService:checkTeamData checking team: " + teamId);
+
+        if (teamId == null || teamId.isEmpty())
+            return;
+
+        Cursor cursor = mContext.getContentResolver().query(
+                DatabaseContract.TeamEntry.buildTeamWithId(Long.valueOf(teamId)),
+                TEAM_COLUMNS,
+                null,
+                null,
+                null);
+
+        String test = cursor.getCount() == 0 ? "DOES NOT EXIST" : "EXIST";
+        Log.d(LOG_TAG, ":::::::::::::::::::::::::::::::::: myFetchService:checkTeamData team: " + teamId + test);
+
+        if (cursor.getCount() == 0)
+            obtainTeamData(teamId);
+    }
+
+    private void obtainTeamData(String teamId) {
+        //Creating fetch URL
+        final String BASE_URL = "http://api.football-data.org/alpha/teams"; //Base URL
+
+        Uri fetch_build = Uri.parse(BASE_URL)
+                .buildUpon()
+                .appendPath(teamId)
+                .build();
+
+        HttpURLConnection m_connection = null;
+        BufferedReader reader = null;
+        String JSON_data = null;
+        //Opening Connection
+        try {
+            URL fetch = new URL(fetch_build.toString());
+            m_connection = (HttpURLConnection) fetch.openConnection();
+            m_connection.setRequestMethod("GET");
+            m_connection.addRequestProperty("X-Auth-Token", getString(R.string.api_key));
+            m_connection.connect();
+
+            // Read the input stream into a String
+            InputStream inputStream = m_connection.getInputStream();
+            StringBuffer buffer = new StringBuffer();
+            if (inputStream == null) {
+                // Nothing to do.
+                return;
+            }
+            reader = new BufferedReader(new InputStreamReader(inputStream));
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                // Since it's JSON, adding a newline isn't necessary (it won't affect parsing)
+                // But it does make debugging a *lot* easier if you print out the completed
+                // buffer for debugging.
+                buffer.append(line + "\n");
+            }
+            if (buffer.length() == 0) {
+                // Stream was empty.  No point in parsing.
+                return;
+            }
+            JSON_data = buffer.toString();
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Exception here" + e.getMessage());
+        } finally {
+            if (m_connection != null) {
+                m_connection.disconnect();
+            }
+            if (reader != null) {
+                try {
+                    reader.close();
+                } catch (IOException e) {
+                    Log.e(LOG_TAG, "Error Closing Stream");
+                }
+            }
+        }
+        try {
+
+            Log.d(LOG_TAG, "++++++++++++++++++++++++++++ JSON returned: \n" + JSON_data);
+
+            if (JSON_data != null) {
+                //This bit is to check if the data contains any matches. If not, we call processJson on the dummy data
+                JSONArray matches = new JSONObject(JSON_data).getJSONArray("fixtures");
+
+                if (matches.length() != 0)
+                    processTeamJSONdata(JSON_data, true);
+
+            } else {
+                //Could not Connect
+                Log.d(LOG_TAG, "Could not connect to server.");
+            }
+        } catch (Exception e) {
+            Log.e(LOG_TAG, e.getMessage());
+        }
+    }
+
+    private void processTeamJSONdata(String JSONdata, boolean isReal) {
+        //JSON data
+        // This set of league codes is for the 2015/2016 season. In fall of 2016, they will need to
+        // be updated. Feel free to use the codes
+
+        final String TEAM_URL = "http://api.football-data.org/alpha/teams/"; //Base URL
+        final String NAME = "name";
+        final String ABBREVIATION = "code";
+        final String CREST = "crestUrl";
+        final String LINKS = "_links";
+        final String SELF = "self";
+
+        String teamId = null;
+        String name = null;
+        String abbreviation = null;
+        String crest = null;
+
+        try {
+            JSONObject team = new JSONObject(JSONdata);
+
+            //ContentValues to be inserted
+            teamId = team.getJSONObject(LINKS).getJSONObject(SELF).
+                    getString("href");
+            teamId = teamId.replace(TEAM_URL, "");
+            name = team.getString(NAME);
+            abbreviation = team.getString(ABBREVIATION);
+            crest = team.getString(CREST);
+
+            Log.d(LOG_TAG, "::::::::::::::::::::::::TEAM VALUES: "
+                    + "\nteamId:" + teamId
+                    + "\nname:" + name
+                    + "\nabbreviation:" + abbreviation
+                    + "\ncrest:" + crest);
+
+            ContentValues teamData = new ContentValues();
+            teamData.put(DatabaseContract.TeamEntry.TEAM_ID, teamId);
+            teamData.put(DatabaseContract.TeamEntry.NAME_COL, name);
+            teamData.put(DatabaseContract.TeamEntry.ABBREVIATION_COL, abbreviation);
+            teamData.put(DatabaseContract.TeamEntry.CREST_URL_COL, crest);
+
+            Uri uri = mContext.getContentResolver().insert(
+                    DatabaseContract.FixtureEntry.CONTENT_URI, teamData);
+
+            Log.d(LOG_TAG, "::::::::::::::::::::::::::: Team inserted " + uri.toString());
+
+        } catch (JSONException e) {
+            Log.e(LOG_TAG, e.getMessage());
+        }
+
+    }
+
+    private void checkLeagueData(String leagueId) {
+        return;
     }
 }
 
