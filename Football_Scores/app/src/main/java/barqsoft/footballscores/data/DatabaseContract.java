@@ -65,7 +65,7 @@ public class DatabaseContract
 
         //Table data
         public static final String TEAM_ID = "team_id";
-        public static final String NAME_COL = "league";
+        public static final String NAME_COL = "name";
         public static final String ABBREVIATION_COL = "abbreviation";
         public static final String CREST_URL_COL = "crest_url";
 
@@ -81,6 +81,10 @@ public class DatabaseContract
         public static Uri buildTeamWithId(long id) {
             return ContentUris.withAppendedId(CONTENT_URI, id);
         }
+
+        public static long getIdFromUri(Uri uri) {
+            return Long.parseLong(uri.getPathSegments().get(1));
+        }
     }
 
     public static final class LeagueEntry implements BaseColumns {
@@ -89,7 +93,7 @@ public class DatabaseContract
 
         //Table data
         public static final String LEAGUE_ID = "team_id";
-        public static final String NAME_COL = "league";
+        public static final String NAME_COL = "name";
         public static final String ABBREVIATION_COL = "abbreviation";
         public static final String NUMBER_OF_TEAMS_COL = "number_of_teams";
         public static final String NUMBER_OF_GAMES_COL = "number_of_games";

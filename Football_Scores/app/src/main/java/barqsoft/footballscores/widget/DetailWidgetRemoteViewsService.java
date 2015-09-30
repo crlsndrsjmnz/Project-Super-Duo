@@ -46,7 +46,7 @@ class DetailWidgetRemoteViewsFactory implements RemoteViewsService.RemoteViewsFa
     public static final int INDEX_ID = 8;
     public static final int INDEX_MATCHDAY = 9;
     private static final String[] SCORES_COLUMNS = {
-            DatabaseContract.FixtureEntry._ID,
+            DatabaseContract.FixtureEntry.TABLE_NAME + "." + DatabaseContract.FixtureEntry._ID,
             DatabaseContract.FixtureEntry.DATE_COL,
             DatabaseContract.FixtureEntry.TIME_COL,
             DatabaseContract.FixtureEntry.HOME_COL,
@@ -55,7 +55,8 @@ class DetailWidgetRemoteViewsFactory implements RemoteViewsService.RemoteViewsFa
             DatabaseContract.FixtureEntry.HOME_GOALS_COL,
             DatabaseContract.FixtureEntry.AWAY_GOALS_COL,
             DatabaseContract.FixtureEntry.MATCH_ID,
-            DatabaseContract.FixtureEntry.MATCH_DAY
+            DatabaseContract.FixtureEntry.MATCH_DAY,
+            "T1." + DatabaseContract.TeamEntry.NAME_COL
     };
     private static final String LOG_TAG = DetailWidgetRemoteViewsFactory.class.getSimpleName();
     private Context mContext;

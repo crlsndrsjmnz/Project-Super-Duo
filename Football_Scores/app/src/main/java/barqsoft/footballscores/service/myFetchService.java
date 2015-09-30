@@ -57,21 +57,15 @@ public class myFetchService extends IntentService {
     }
 
     private void getData(String timeFrame) {
-        //Creating fetch URL
-        final String BASE_URL = "http://api.football-data.org/alpha/fixtures/149340"; //Base URL
-        Uri fetch_build = Uri.parse(BASE_URL)
-                .buildUpon()
-                .build();
 
-        Log.d(LOG_TAG, "::::::::::::::::: myFetchService:getData " + fetch_build.toString());
-        /*
+        //Creating fetch URL
         final String BASE_URL = "http://api.football-data.org/alpha/fixtures"; //Base URL
         final String QUERY_TIME_FRAME = "timeFrame"; //Time Frame parameter to determine days
         //final String QUERY_MATCH_DAY = "matchday";
 
         Uri fetch_build = Uri.parse(BASE_URL).buildUpon().
                 appendQueryParameter(QUERY_TIME_FRAME, timeFrame).build();
-        */
+
         HttpURLConnection m_connection = null;
         BufferedReader reader = null;
         String JSON_data = null;
@@ -106,6 +100,7 @@ public class myFetchService extends IntentService {
             JSON_data = buffer.toString();
         } catch (Exception e) {
             Log.e(LOG_TAG, "Exception here" + e.getMessage());
+            e.printStackTrace();
         } finally {
             if (m_connection != null) {
                 m_connection.disconnect();
@@ -115,6 +110,7 @@ public class myFetchService extends IntentService {
                     reader.close();
                 } catch (IOException e) {
                     Log.e(LOG_TAG, "Error Closing Stream");
+                    e.printStackTrace();
                 }
             }
         }
@@ -136,13 +132,12 @@ public class myFetchService extends IntentService {
                 Log.d(LOG_TAG, "Could not connect to server.");
             }
         } catch (Exception e) {
-            Log.e(LOG_TAG, e.getMessage());
+            Log.e(LOG_TAG, "getData: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
     private void processJSONdata(String JSONdata, boolean isReal) {
-
-        Log.d(LOG_TAG, "::::::::::::::::: myFetchService:processJSONdata");
 
         //JSON data
         // This set of league codes is for the 2015/2016 season. In fall of 2016, they will need to
@@ -238,8 +233,9 @@ public class myFetchService extends IntentService {
                             mDate = mformat.format(fragmentdate);
                         }
                     } catch (Exception e) {
-                        Log.d(LOG_TAG, "error here!");
-                        Log.e(LOG_TAG, e.getMessage());
+                        Log.d(LOG_TAG, "processJSONdata: error here!");
+                        Log.e(LOG_TAG, "processJSONdata:" + e.getMessage());
+                        e.printStackTrace();
                     }
                     Home = match_data.getString(HOME_TEAM);
                     Away = match_data.getString(AWAY_TEAM);
@@ -287,17 +283,16 @@ public class myFetchService extends IntentService {
                     mContext.sendBroadcast(intent);
                 }
             } else {
-                Log.e(LOG_TAG, "No fixtures fetched");
+                Log.e(LOG_TAG, "processJSONdata: No fixtures fetched");
             }
 
         } catch (JSONException e) {
-            Log.e(LOG_TAG, e.getMessage());
+            Log.e(LOG_TAG, "processJSONdata:" + e.getMessage());
+            e.printStackTrace();
         }
     }
 
     private void checkTeamData(String teamId) {
-
-        Log.d(LOG_TAG, ":::::::::::::::::::::::::::::::::: myFetchService:checkTeamData checking team: " + teamId);
 
         if (teamId == null || teamId.isEmpty())
             return;
@@ -309,14 +304,16 @@ public class myFetchService extends IntentService {
                 null,
                 null);
 
-        String test = cursor.getCount() == 0 ? "DOES NOT EXIST" : "EXIST";
-        Log.d(LOG_TAG, ":::::::::::::::::::::::::::::::::: myFetchService:checkTeamData team: " + teamId + test);
-
         if (cursor.getCount() == 0)
             obtainTeamData(teamId);
+
+        cursor.close();
     }
 
     private void obtainTeamData(String teamId) {
+
+        Log.i(LOG_TAG, "Fetching data for team: " + teamId);
+
         //Creating fetch URL
         final String BASE_URL = "http://api.football-data.org/alpha/teams"; //Base URL
 
@@ -358,7 +355,8 @@ public class myFetchService extends IntentService {
             }
             JSON_data = buffer.toString();
         } catch (Exception e) {
-            Log.e(LOG_TAG, "Exception here" + e.getMessage());
+            Log.e(LOG_TAG, "obtainTeamData: Exception here" + e.getMessage());
+            e.printStackTrace();
         } finally {
             if (m_connection != null) {
                 m_connection.disconnect();
@@ -367,27 +365,26 @@ public class myFetchService extends IntentService {
                 try {
                     reader.close();
                 } catch (IOException e) {
-                    Log.e(LOG_TAG, "Error Closing Stream");
+                    Log.e(LOG_TAG, "obtainTeamData: Error Closing Stream");
+                    e.printStackTrace();
                 }
             }
         }
         try {
-
-            Log.d(LOG_TAG, "++++++++++++++++++++++++++++ JSON returned: \n" + JSON_data);
-
             if (JSON_data != null) {
                 //This bit is to check if the data contains any matches. If not, we call processJson on the dummy data
-                JSONArray matches = new JSONObject(JSON_data).getJSONArray("fixtures");
+                JSONObject team = new JSONObject(JSON_data);
 
-                if (matches.length() != 0)
+                if (team != null && team.has("name"))
                     processTeamJSONdata(JSON_data, true);
 
             } else {
                 //Could not Connect
-                Log.d(LOG_TAG, "Could not connect to server.");
+                Log.d(LOG_TAG, "obtainTeamData: Could not connect to server.");
             }
         } catch (Exception e) {
-            Log.e(LOG_TAG, e.getMessage());
+            Log.e(LOG_TAG, "obtainTeamData: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -419,22 +416,14 @@ public class myFetchService extends IntentService {
             abbreviation = team.getString(ABBREVIATION);
             crest = team.getString(CREST);
 
-            Log.d(LOG_TAG, "::::::::::::::::::::::::TEAM VALUES: "
-                    + "\nteamId:" + teamId
-                    + "\nname:" + name
-                    + "\nabbreviation:" + abbreviation
-                    + "\ncrest:" + crest);
-
             ContentValues teamData = new ContentValues();
             teamData.put(DatabaseContract.TeamEntry.TEAM_ID, teamId);
             teamData.put(DatabaseContract.TeamEntry.NAME_COL, name);
             teamData.put(DatabaseContract.TeamEntry.ABBREVIATION_COL, abbreviation);
             teamData.put(DatabaseContract.TeamEntry.CREST_URL_COL, crest);
 
-            Uri uri = mContext.getContentResolver().insert(
-                    DatabaseContract.FixtureEntry.CONTENT_URI, teamData);
-
-            Log.d(LOG_TAG, "::::::::::::::::::::::::::: Team inserted " + uri.toString());
+            mContext.getContentResolver().insert(
+                    DatabaseContract.TeamEntry.CONTENT_URI, teamData);
 
         } catch (JSONException e) {
             Log.e(LOG_TAG, e.getMessage());

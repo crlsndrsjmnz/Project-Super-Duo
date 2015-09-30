@@ -13,7 +13,7 @@ import barqsoft.footballscores.data.DatabaseContract.TeamEntry;
  */
 public class ScoresDBHelper extends SQLiteOpenHelper {
     public static final String DATABASE_NAME = "scores.db";
-    private static final int DATABASE_VERSION = 2;
+    private static final int DATABASE_VERSION = 1;
 
     public ScoresDBHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -73,7 +73,7 @@ public class ScoresDBHelper extends SQLiteOpenHelper {
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         //Remove old values when upgrading.
         db.execSQL("DROP TABLE IF EXISTS " + FixtureEntry.TABLE_NAME);
-        //db.execSQL("DROP TABLE IF EXISTS " + TeamEntry.TABLE_NAME);
-        //db.execSQL("DROP TABLE IF EXISTS " + LeagueEntry.TABLE_NAME);
+        db.execSQL("DROP TABLE IF EXISTS " + TeamEntry.TABLE_NAME);
+        db.execSQL("DROP TABLE IF EXISTS " + LeagueEntry.TABLE_NAME);
     }
 }

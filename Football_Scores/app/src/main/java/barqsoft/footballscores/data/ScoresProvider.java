@@ -7,7 +7,6 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
-import android.util.Log;
 
 /**
  * Created by yehya khaled on 2/25/2015.
@@ -24,8 +23,7 @@ public class ScoresProvider extends ContentProvider {
     private static final int TEAMS = 300;
     private static final int TEAMS_WITH_ID = 301;
 
-    private static final SQLiteQueryBuilder ScoreQuery =
-            new SQLiteQueryBuilder();
+    private static final SQLiteQueryBuilder sFixtureQueryBuilder;
 
     private static final UriMatcher sUriMatcher = buildUriMatcher();
 
@@ -60,14 +58,44 @@ public class ScoresProvider extends ContentProvider {
                 FIXTURES_WITH_DATE);
 
         sUriMatcher.addURI(DatabaseContract.CONTENT_AUTHORITY,
+                DatabaseContract.LEAGUE_PATH,
+                LEAGUES);
+
+        sUriMatcher.addURI(DatabaseContract.CONTENT_AUTHORITY,
                 DatabaseContract.LEAGUE_PATH + "/#",
                 LEAGUES_WITH_ID);
+
+        sUriMatcher.addURI(DatabaseContract.CONTENT_AUTHORITY,
+                DatabaseContract.TEAM_PATH,
+                TEAMS);
 
         sUriMatcher.addURI(DatabaseContract.CONTENT_AUTHORITY,
                 DatabaseContract.TEAM_PATH + "/#",
                 TEAMS_WITH_ID);
 
         return sUriMatcher;
+    }
+
+    static{
+        sFixtureQueryBuilder = new SQLiteQueryBuilder();
+
+        //This is an inner join which looks like
+        // Songs
+        // LEFT JOIN Artists ON Songs.artist_id = Artists._id
+        // LEFT JOIN Albums ON Songs.album_id = Albums._id
+
+        sFixtureQueryBuilder.setTables(
+                DatabaseContract.FixtureEntry.TABLE_NAME + " LEFT JOIN " +
+                        DatabaseContract.TeamEntry.TABLE_NAME +
+                        " AS T1 ON " + DatabaseContract.FixtureEntry.TABLE_NAME +
+                        "." + DatabaseContract.FixtureEntry.HOME_COL +
+                        " = T1." + DatabaseContract.TeamEntry._ID + " LEFT JOIN " +
+                        DatabaseContract.TeamEntry.TABLE_NAME +
+                        " AS T2 ON " + DatabaseContract.FixtureEntry.TABLE_NAME +
+                        "." + DatabaseContract.FixtureEntry.AWAY_COL +
+                        " = T2." + DatabaseContract.TeamEntry._ID
+        );
+
     }
 
     @Override
@@ -116,8 +144,7 @@ public class ScoresProvider extends ContentProvider {
                         projection, null, null, null, null, sortOrder);
                 break;
             case FIXTURES_WITH_DATE:
-                retCursor = mOpenHelper.getReadableDatabase().query(
-                        DatabaseContract.FixtureEntry.TABLE_NAME,
+                retCursor = sFixtureQueryBuilder.query(mOpenHelper.getReadableDatabase(),
                         projection, FIXTURES_BY_DATE, selectionArgs, null, null, sortOrder);
                 break;
             case FIXTURES_WITH_ID:
@@ -141,9 +168,7 @@ public class ScoresProvider extends ContentProvider {
                         projection, null, null, null, null, sortOrder);
                 break;
             case TEAMS_WITH_ID:
-                retCursor = mOpenHelper.getReadableDatabase().query(
-                        DatabaseContract.TeamEntry.TABLE_NAME,
-                        projection, TEAM_BY_ID, selectionArgs, null, null, sortOrder);
+                retCursor = getTeamById(uri, projection, sortOrder);
                 break;
             default:
                 throw new UnsupportedOperationException("Unknown Uri " + uri);
@@ -154,19 +179,40 @@ public class ScoresProvider extends ContentProvider {
 
     @Override
     public Uri insert(Uri uri, ContentValues values) {
-        return null;
+        final SQLiteDatabase db = mOpenHelper.getWritableDatabase();
+        final int match = sUriMatcher.match(uri);
+        Uri returnUri;
+
+        switch (match) {
+            case TEAMS: {
+                long _id = db.insert(DatabaseContract.TeamEntry.TABLE_NAME, null, values);
+                if ( _id > 0 )
+                    returnUri = DatabaseContract.TeamEntry.buildTeamWithId(_id);
+                else
+                    throw new android.database.SQLException("Failed to insert row into " + uri);
+                break;
+            }
+            case LEAGUES: {
+                long _id = db.insert(DatabaseContract.LeagueEntry.TABLE_NAME, null, values);
+                if ( _id > 0 )
+                    returnUri = DatabaseContract.LeagueEntry.buildLeagueWithId(_id);
+                else
+                    throw new android.database.SQLException("Failed to insert row into " + uri);
+                break;
+            }
+            default:
+                throw new UnsupportedOperationException("Unknown uri: " + uri);
+        }
+        getContext().getContentResolver().notifyChange(uri, null);
+        return returnUri;
     }
 
     @Override
     public int bulkInsert(Uri uri, ContentValues[] values) {
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
 
-        Log.d(LOG_TAG, ";;;;;;;;;;;;;;;;;;;;;;;;;;; ScoresProvider:bulkInsert Uri: " + uri.toString() + " - sUriMatcher: " + sUriMatcher.match(uri));
-
         switch (sUriMatcher.match(uri)) {
             case FIXTURES:
-
-                Log.d(LOG_TAG, ";;;;;;;;;;;;;;;;;;;;;;;;;;; ScoresProvider:bulkInsert FIXTURES : " + FIXTURES);
 
                 db.beginTransaction();
                 int returncount = 0;
@@ -174,8 +220,6 @@ public class ScoresProvider extends ContentProvider {
                     for (ContentValues value : values) {
                         long _id = db.insertWithOnConflict(DatabaseContract.FixtureEntry.TABLE_NAME, null, value,
                                 SQLiteDatabase.CONFLICT_REPLACE);
-
-                        Log.d(LOG_TAG, ";;;;;;;;;;;;;;;;;;;;;;;;;;; ScoresProvider:bulkInsert id: " + _id + " - " + value.get(DatabaseContract.FixtureEntry.MATCH_ID));
 
                         if (_id != -1) {
                             returncount++;
@@ -195,5 +239,15 @@ public class ScoresProvider extends ContentProvider {
     @Override
     public int delete(Uri uri, String selection, String[] selectionArgs) {
         return 0;
+    }
+
+    private Cursor getTeamById(
+            Uri uri, String[] projection, String sortOrder) {
+        long teamId = DatabaseContract.TeamEntry.getIdFromUri(uri);
+
+        return mOpenHelper.getReadableDatabase().query(
+                DatabaseContract.TeamEntry.TABLE_NAME,
+                projection, TEAM_BY_ID, new String[]{Long.toString(teamId)}, null, null, sortOrder);
+
     }
 }

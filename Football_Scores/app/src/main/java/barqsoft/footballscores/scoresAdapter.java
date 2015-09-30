@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.support.v4.widget.CursorAdapter;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,15 +15,19 @@ import android.widget.TextView;
  * Created by yehya khaled on 2/26/2015.
  */
 public class scoresAdapter extends CursorAdapter {
+
+    public static final String LOG_TAG = scoresAdapter.class.getSimpleName();
+
+    public static final int COL_DATE = 1;
+    public static final int COL_MATCHTIME = 2;
     public static final int COL_HOME = 3;
     public static final int COL_AWAY = 4;
+    public static final int COL_LEAGUE = 5;
     public static final int COL_HOME_GOALS = 6;
     public static final int COL_AWAY_GOALS = 7;
-    public static final int COL_DATE = 1;
-    public static final int COL_LEAGUE = 5;
-    public static final int COL_MATCHDAY = 9;
     public static final int COL_ID = 8;
-    public static final int COL_MATCHTIME = 2;
+    public static final int COL_MATCHDAY = 9;
+
     public double detail_match_id = 0;
     private String FOOTBALL_SCORES_HASHTAG = "#Football_Scores";
 
@@ -41,6 +46,21 @@ public class scoresAdapter extends CursorAdapter {
     @Override
     public void bindView(View view, final Context context, Cursor cursor) {
         final ViewHolder mHolder = (ViewHolder) view.getTag();
+
+        Log.d(LOG_TAG, ">>>>>>>>>>>>>>>>>>>>> COL_TEAM \n" + cursor.getString(2));
+        Log.d(LOG_TAG, ">>>>>>>>>>>>>>>>>>>>> COL_TEAM \n" + cursor.getString(3));
+        Log.d(LOG_TAG, ">>>>>>>>>>>>>>>>>>>>> COL_TEAM \n" + cursor.getString(10));
+        Log.d(LOG_TAG, ">>>>>>>>>>>>>>>>>>>>> COL_TEAM \n" + cursor.getString(11));
+        Log.d(LOG_TAG, ">>>>>>>>>>>>>>>>>>>>> COL_TEAM \n" + cursor.getString(12));
+        Log.d(LOG_TAG, ">>>>>>>>>>>>>>>>>>>>> COL_TEAM \n" + cursor.getString(13));
+        Log.d(LOG_TAG, ">>>>>>>>>>>>>>>>>>>>> COL_TEAM \n" + cursor.getString(14));
+        Log.d(LOG_TAG, ">>>>>>>>>>>>>>>>>>>>> COL_TEAM \n" + cursor.getString(15));
+        Log.d(LOG_TAG, ">>>>>>>>>>>>>>>>>>>>> COL_TEAM \n" + cursor.getString(16));
+        Log.d(LOG_TAG, ">>>>>>>>>>>>>>>>>>>>> COL_TEAM \n" + cursor.getString(17));
+        Log.d(LOG_TAG, ">>>>>>>>>>>>>>>>>>>>> COL_TEAM \n" + cursor.getString(18));
+        Log.d(LOG_TAG, ">>>>>>>>>>>>>>>>>>>>> COL_TEAM \n" + cursor.getString(19));
+        Log.d(LOG_TAG, ">>>>>>>>>>>>>>>>>>>>> \n");
+
         mHolder.home_name.setText(cursor.getString(COL_HOME));
         mHolder.away_name.setText(cursor.getString(COL_AWAY));
         mHolder.date.setText(cursor.getString(COL_MATCHTIME));
