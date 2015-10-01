@@ -312,8 +312,6 @@ public class myFetchService extends IntentService {
 
     private void obtainTeamData(String teamId) {
 
-        Log.i(LOG_TAG, "Fetching data for team: " + teamId);
-
         //Creating fetch URL
         final String BASE_URL = "http://api.football-data.org/alpha/teams"; //Base URL
 
@@ -354,8 +352,6 @@ public class myFetchService extends IntentService {
                 return;
             }
             JSON_data = buffer.toString();
-
-            Log.d(LOG_TAG, "Team Json: " + teamId + " - JSON_data: " + JSON_data);
 
         } catch (Exception e) {
             Log.e(LOG_TAG, "obtainTeamData: Exception here" + e.getMessage());
