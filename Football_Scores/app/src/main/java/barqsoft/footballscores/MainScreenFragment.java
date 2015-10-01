@@ -12,6 +12,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ListView;
+import android.widget.Toast;
 
 import barqsoft.footballscores.data.DatabaseContract;
 import barqsoft.footballscores.service.myFetchService;
@@ -28,8 +29,12 @@ public class MainScreenFragment extends Fragment implements LoaderManager.Loader
     }
 
     private void update_scores() {
-        Intent service_start = new Intent(getActivity(), myFetchService.class);
-        getActivity().startService(service_start);
+        if (Utility.isNetworkAvailable(getActivity())) {
+            Intent service_start = new Intent(getActivity(), myFetchService.class);
+            getActivity().startService(service_start);
+        } else {
+            Toast.makeText(getActivity(), getString(R.string.no_network), Toast.LENGTH_LONG).show();
+        }
     }
 
     public void setFragmentDate(String date) {

@@ -80,21 +80,20 @@ public class scoresAdapter extends CursorAdapter {
             values = values + cursor.getString(i) + ", ";
         }
 
-        mHolder.home_name.setText(cursor.getString(COL_HOME_TEAM_NAME));
-        mHolder.away_name.setText(cursor.getString(COL_AWAY_TEAM_NAME));
+        String homeTeamName = cursor.getString(COL_HOME_TEAM_NAME);
+        String awayTeamName = cursor.getString(COL_AWAY_TEAM_NAME);
+
+        mHolder.home_name.setText(homeTeamName);
+        mHolder.away_name.setText(awayTeamName);
         mHolder.date.setText(cursor.getString(COL_MATCHTIME));
         mHolder.score.setText(Utility.getScores(cursor.getInt(COL_HOME_GOALS), cursor.getInt(COL_AWAY_GOALS)));
         mHolder.match_id = cursor.getDouble(COL_ID);
 
         showImage(mHolder.home_crest, cursor.getString(COL_HOME_TEAM_CREST));
-        showImage(mHolder.away_crest, cursor.getString(COL_AWAY_TEAM_CREST));
+        mHolder.home_crest.setContentDescription(homeTeamName);
 
-        /*
-        mHolder.home_crest.setImageResource(Utility.getTeamCrestByTeamName(
-                cursor.getString(COL_HOME)));
-        mHolder.away_crest.setImageResource(Utility.getTeamCrestByTeamName(
-                cursor.getString(COL_AWAY)));
-        */
+        showImage(mHolder.away_crest, cursor.getString(COL_AWAY_TEAM_CREST));
+        mHolder.away_crest.setContentDescription(awayTeamName);
 
         LayoutInflater vi = (LayoutInflater) context.getApplicationContext()
                 .getSystemService(Context.LAYOUT_INFLATER_SERVICE);
@@ -109,7 +108,10 @@ public class scoresAdapter extends CursorAdapter {
                     cursor.getInt(COL_LEAGUE)));
             TextView league = (TextView) v.findViewById(R.id.league_textview);
             league.setText(Utility.getLeague(context, cursor.getInt(COL_LEAGUE)));
+
             Button share_button = (Button) v.findViewById(R.id.share_button);
+            share_button.setContentDescription(context.getString(R.string.share_text));
+
             share_button.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -125,6 +127,8 @@ public class scoresAdapter extends CursorAdapter {
     }
 
     public void showImage(ImageView view, String crestUrl) {
+
+        final ImageView fView = view;
 
         if (crestUrl.endsWith(".svg")) {
             GenericRequestBuilder<Uri, InputStream, SVG, PictureDrawable> requestBuilder;

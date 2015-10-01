@@ -10,6 +10,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/material_blue_grey_900"
+        android:contentDescription="@string/app_name"
         android:gravity="center"
         android:orientation="horizontal"
         android:padding="@dimen/widget_padding_vertical">
@@ -27,12 +28,14 @@
         android:layout_height="0dp"
         android:layout_gravity="center"
         android:layout_weight="1"
-        android:background="@color/green13">
+        android:background="@color/white">
 
         <ListView
             android:id="@+id/score_list"
             android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+            android:layout_height="match_parent"
+            android:divider="@color/green13"
+            android:dividerHeight="1dp" />
 
         <TextView
             android:id="@+id/widget_empty_view"

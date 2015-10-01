@@ -32,6 +32,17 @@
                 android:layout_height="@dimen/widget_icon"
                 android:layout_gravity="center"
                 tools:src="@drawable/chelsea" />
+
+            <TextView
+                android:id="@+id/widget_home_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:fontFamily="sans-serif"
+                android:textColor="@color/primary_text"
+                android:textSize="@dimen/widget_main_text_size"
+                tools:text="CHE" />
+
         </LinearLayout>
 
         <TextView
@@ -98,6 +109,16 @@
                 android:layout_height="@dimen/widget_icon"
                 android:layout_gravity="center"
                 tools:src="@drawable/liverpool" />
+
+            <TextView
+                android:id="@+id/widget_away_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:fontFamily="sans-serif"
+                android:textColor="@color/primary_text"
+                android:textSize="@dimen/widget_main_text_size"
+                tools:text="LIV" />
         </LinearLayout>
     </LinearLayout>
 </FrameLayout>

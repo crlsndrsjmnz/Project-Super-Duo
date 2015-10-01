@@ -6,8 +6,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Bitmap;
-import android.graphics.Canvas;
-import android.graphics.drawable.PictureDrawable;
 import android.net.Uri;
 import android.os.Binder;
 import android.os.Build;
@@ -16,24 +14,15 @@ import android.widget.AdapterView;
 import android.widget.RemoteViews;
 import android.widget.RemoteViewsService;
 
-import com.bumptech.glide.GenericRequestBuilder;
 import com.bumptech.glide.Glide;
-import com.bumptech.glide.load.engine.DiskCacheStrategy;
-import com.bumptech.glide.load.model.StreamEncoder;
-import com.bumptech.glide.load.resource.file.FileToStreamDecoder;
-import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.target.Target;
-import com.caverock.androidsvg.SVG;
 
-import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.concurrent.ExecutionException;
 
 import barqsoft.footballscores.R;
+import barqsoft.footballscores.Utility;
 import barqsoft.footballscores.data.DatabaseContract;
-import barqsoft.footballscores.svg.SvgDecoder;
-import barqsoft.footballscores.svg.SvgDrawableTranscoder;
 
 /**
  * Created by Carlos on 9/22/2015.
@@ -62,10 +51,10 @@ class DetailWidgetRemoteViewsFactory implements RemoteViewsService.RemoteViewsFa
     public static final int INDEX_ID = 8;
     public static final int INDEX_MATCHDAY = 9;
     public static final int INDEX_HOME_NAME = 10;
-    public static final int INDEX_HOME_TEAM = 11;
+    public static final int INDEX_HOME_ABB = 11;
     public static final int INDEX_HOME_CREST = 12;
     public static final int INDEX_AWAY_NAME = 13;
-    public static final int INDEX_AWAY_TEAM = 14;
+    public static final int INDEX_AWAY_ABB = 14;
     public static final int INDEX_AWAY_CREST = 15;
     private static final String[] SCORES_COLUMNS = {
             DatabaseContract.FixtureEntry.TABLE_NAME + "." + DatabaseContract.FixtureEntry._ID,
@@ -112,7 +101,7 @@ class DetailWidgetRemoteViewsFactory implements RemoteViewsService.RemoteViewsFa
 
         //Date currentDate = new Date(System.currentTimeMillis());
         Calendar cal = Calendar.getInstance();
-        cal.add(Calendar.DATE, -1);
+        cal.add(Calendar.DATE, -2);
 
         SimpleDateFormat formattedDate = new SimpleDateFormat("yyyy-MM-dd");
 
@@ -160,8 +149,8 @@ class DetailWidgetRemoteViewsFactory implements RemoteViewsService.RemoteViewsFa
         int homeIcon, awayIcon;
 
         time = mCursor.getString(INDEX_MATCH_TIME);
-        homeGoals = mCursor.getInt(INDEX_HOME_GOALS) > 0 ? String.valueOf(mCursor.getInt(INDEX_HOME_GOALS)) : "";
-        awayGoals = mCursor.getInt(INDEX_AWAY_GOALS) > 0 ? String.valueOf(mCursor.getInt(INDEX_AWAY_GOALS)) : "";
+        homeGoals = mCursor.getInt(INDEX_HOME_GOALS) >= 0 ? String.valueOf(mCursor.getInt(INDEX_HOME_GOALS)) : "";
+        awayGoals = mCursor.getInt(INDEX_AWAY_GOALS) >= 0 ? String.valueOf(mCursor.getInt(INDEX_AWAY_GOALS)) : "";
         matchId = mCursor.getDouble(INDEX_ID);
 
         // Get the layout for the App Widget and attach an on-click listener
@@ -178,17 +167,13 @@ class DetailWidgetRemoteViewsFactory implements RemoteViewsService.RemoteViewsFa
         setTeamCrest(views, R.id.widget_home_icon, homeTeamName, homeCrestUrl);
         setTeamCrest(views, R.id.widget_away_icon, awayTeamName, awayCrestUrl);
 
-        //views.setImageViewResource(R.id.widget_home_icon, homeIcon);
-        //views.setImageViewResource(R.id.widget_away_icon, awayIcon);
-
-        /*
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1) {
-            setRemoteContentDescription(views, R.id.widget_home_icon, description);
+            setRemoteContentDescription(views, R.id.widget_home_icon, homeTeamName);
+            setRemoteContentDescription(views, R.id.widget_away_icon, awayTeamName);
         }
-        */
 
-        //views.setTextViewText(R.id.widget_home_name, homeTeam);
-        //views.setTextViewText(R.id.widget_away_name, awayTeam);
+        views.setTextViewText(R.id.widget_home_name, mCursor.getString(INDEX_HOME_ABB));
+        views.setTextViewText(R.id.widget_away_name, mCursor.getString(INDEX_AWAY_ABB));
         views.setTextViewText(R.id.widget_home_goals, homeGoals);
         views.setTextViewText(R.id.widget_away_goals, awayGoals);
         views.setTextViewText(R.id.widget_match_time, time);
@@ -221,56 +206,16 @@ class DetailWidgetRemoteViewsFactory implements RemoteViewsService.RemoteViewsFa
     private void setTeamCrest(RemoteViews views, int viewId, String teamName, String crestUrl) {
         Bitmap crestBitmap = null;
 
-        final RemoteViews fViews = views;
-        final int fViewId = viewId;
-
         try {
             if (crestUrl.endsWith(".svg")) {
-                // TODO: How to convert svg files to Bitmap
 
-                GenericRequestBuilder<Uri, InputStream, SVG, PictureDrawable> requestBuilder;
+                // TODO: How to convert URL svg files to Bitmap?
+                // http://stackoverflow.com/questions/32889269/getting-a-bitmap-from-a-svg-url-resource
 
-                requestBuilder = Glide.with(mContext)
-                        .using(Glide.buildStreamModelLoader(Uri.class, mContext), InputStream.class)
-                        .from(Uri.class)
-                        .as(SVG.class)
-                        .transcode(new SvgDrawableTranscoder(), PictureDrawable.class)
-                        .sourceEncoder(new StreamEncoder())
-                        .cacheDecoder(new FileToStreamDecoder<SVG>(new SvgDecoder()))
-                        .decoder(new SvgDecoder())
-                        .placeholder(R.drawable.ic_launcher)
-                        .error(R.drawable.no_icon);
-                //.listener(new SvgSoftwareLayerSetter<Uri>());
+                views.setImageViewResource(viewId, Utility.getTeamCrestByTeamName(teamName));
 
-                requestBuilder
-                        .diskCacheStrategy(DiskCacheStrategy.SOURCE)
-                                // SVG cannot be serialized so it's not worth to cache it
-                        .load(Uri.parse(crestUrl)).listener(new RequestListener<Uri, PictureDrawable>() {
-                    @Override
-                    public boolean onException(Exception e, Uri model, Target<PictureDrawable> target, boolean isFirstResource) {
-                        return false;
-                    }
-
-                    @Override
-                    public boolean onResourceReady(PictureDrawable resource, Uri model, Target<PictureDrawable> target, boolean isFromMemoryCache, boolean isFirstResource) {
-
-                        Bitmap bitmap = Bitmap.createBitmap(resource.getIntrinsicWidth(), resource.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
-                        Canvas canvas = new Canvas(bitmap);
-                        canvas.drawPicture(resource.getPicture());
-
-                        fViews.setImageViewBitmap(fViewId, bitmap);
-
-                        return false;
-                    }
-                });
-                //.into(view);
-
-                /*
-                int crestResource = Utility.getTeamCrestByTeamName(teamName);
-
-                views.setImageViewResource(viewId, crestResource);
-                */
             } else {
+
                 crestBitmap = Glide.with(mContext)
                         .load(crestUrl)
                         .asBitmap()
@@ -281,10 +226,9 @@ class DetailWidgetRemoteViewsFactory implements RemoteViewsService.RemoteViewsFa
                 views.setImageViewBitmap(viewId, crestBitmap);
             }
 
-        } catch (InterruptedException | ExecutionException e) {
+        } catch (Exception e) {
             Log.e(LOG_TAG, "Error retrieving large icon from " + crestUrl, e);
         }
     }
-
 }
 

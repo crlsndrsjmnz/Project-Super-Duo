@@ -422,8 +422,6 @@ public class myFetchService extends IntentService {
 
             ContentValues teamData = new ContentValues();
 
-            Log.d(LOG_TAG, ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Inserting... TEAM_ID: " + teamId + " - name: " + name + " - abbreviation: " + abbreviation + " - crest: " + crest);
-
             teamData.put(DatabaseContract.TeamEntry.TEAM_ID, teamId);
             teamData.put(DatabaseContract.TeamEntry.NAME_COL, name);
             teamData.put(DatabaseContract.TeamEntry.ABBREVIATION_COL, abbreviation);
