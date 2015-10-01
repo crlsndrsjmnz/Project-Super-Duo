@@ -237,8 +237,8 @@ public class myFetchService extends IntentService {
                         Log.e(LOG_TAG, "processJSONdata:" + e.getMessage());
                         e.printStackTrace();
                     }
-                    Home = match_data.getString(HOME_TEAM);
-                    Away = match_data.getString(AWAY_TEAM);
+                    //Home = match_data.getString(HOME_TEAM);
+                    //Away = match_data.getString(AWAY_TEAM);
                     Home_goals = match_data.getJSONObject(RESULT).getString(HOME_GOALS);
                     Away_goals = match_data.getJSONObject(RESULT).getString(AWAY_GOALS);
                     match_day = match_data.getString(MATCH_DAY);
@@ -247,16 +247,16 @@ public class myFetchService extends IntentService {
                     match_values.put(DatabaseContract.FixtureEntry.DATE_COL, mDate);
                     match_values.put(DatabaseContract.FixtureEntry.TIME_COL, mTime);
 
-                    match_values.put(DatabaseContract.FixtureEntry.HOME_COL, Home);
                     Home = match_data.getJSONObject(LINKS).getJSONObject(HOME_TEAM_LINK).
                             getString("href");
                     Home = Home.replace(TEAM_LINK, "");
+                    match_values.put(DatabaseContract.FixtureEntry.HOME_COL, Home);
                     checkTeamData(Home);
 
-                    match_values.put(DatabaseContract.FixtureEntry.AWAY_COL, Away);
                     Away = match_data.getJSONObject(LINKS).getJSONObject(AWAY_TEAM_LINK).
                             getString("href");
                     Away = Away.replace(TEAM_LINK, "");
+                    match_values.put(DatabaseContract.FixtureEntry.AWAY_COL, Away);
                     checkTeamData(Away);
 
                     match_values.put(DatabaseContract.FixtureEntry.HOME_GOALS_COL, Home_goals);
@@ -354,6 +354,9 @@ public class myFetchService extends IntentService {
                 return;
             }
             JSON_data = buffer.toString();
+
+            Log.d(LOG_TAG, "Team Json: " + teamId + " - JSON_data: " + JSON_data);
+
         } catch (Exception e) {
             Log.e(LOG_TAG, "obtainTeamData: Exception here" + e.getMessage());
             e.printStackTrace();
@@ -376,7 +379,7 @@ public class myFetchService extends IntentService {
                 JSONObject team = new JSONObject(JSON_data);
 
                 if (team != null && team.has("name"))
-                    processTeamJSONdata(JSON_data, true);
+                    processTeamJSONdata(JSON_data);
 
             } else {
                 //Could not Connect
@@ -388,7 +391,7 @@ public class myFetchService extends IntentService {
         }
     }
 
-    private void processTeamJSONdata(String JSONdata, boolean isReal) {
+    private void processTeamJSONdata(String JSONdata) {
         //JSON data
         // This set of league codes is for the 2015/2016 season. In fall of 2016, they will need to
         // be updated. Feel free to use the codes
@@ -406,6 +409,7 @@ public class myFetchService extends IntentService {
         String crest = null;
 
         try {
+
             JSONObject team = new JSONObject(JSONdata);
 
             //ContentValues to be inserted
@@ -417,6 +421,9 @@ public class myFetchService extends IntentService {
             crest = team.getString(CREST);
 
             ContentValues teamData = new ContentValues();
+
+            Log.d(LOG_TAG, ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Inserting... TEAM_ID: " + teamId + " - name: " + name + " - abbreviation: " + abbreviation + " - crest: " + crest);
+
             teamData.put(DatabaseContract.TeamEntry.TEAM_ID, teamId);
             teamData.put(DatabaseContract.TeamEntry.NAME_COL, name);
             teamData.put(DatabaseContract.TeamEntry.ABBREVIATION_COL, abbreviation);

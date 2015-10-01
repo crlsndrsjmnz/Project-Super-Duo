@@ -5,19 +5,35 @@ import android.appwidget.AppWidgetManager;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.drawable.PictureDrawable;
 import android.net.Uri;
 import android.os.Binder;
 import android.os.Build;
+import android.util.Log;
 import android.widget.AdapterView;
 import android.widget.RemoteViews;
 import android.widget.RemoteViewsService;
 
+import com.bumptech.glide.GenericRequestBuilder;
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
+import com.bumptech.glide.load.model.StreamEncoder;
+import com.bumptech.glide.load.resource.file.FileToStreamDecoder;
+import com.bumptech.glide.request.RequestListener;
+import com.bumptech.glide.request.target.Target;
+import com.caverock.androidsvg.SVG;
+
+import java.io.InputStream;
 import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.util.Calendar;
+import java.util.concurrent.ExecutionException;
 
 import barqsoft.footballscores.R;
-import barqsoft.footballscores.Utility;
 import barqsoft.footballscores.data.DatabaseContract;
+import barqsoft.footballscores.svg.SvgDecoder;
+import barqsoft.footballscores.svg.SvgDrawableTranscoder;
 
 /**
  * Created by Carlos on 9/22/2015.
@@ -45,6 +61,12 @@ class DetailWidgetRemoteViewsFactory implements RemoteViewsService.RemoteViewsFa
     public static final int INDEX_AWAY_GOALS = 7;
     public static final int INDEX_ID = 8;
     public static final int INDEX_MATCHDAY = 9;
+    public static final int INDEX_HOME_NAME = 10;
+    public static final int INDEX_HOME_TEAM = 11;
+    public static final int INDEX_HOME_CREST = 12;
+    public static final int INDEX_AWAY_NAME = 13;
+    public static final int INDEX_AWAY_TEAM = 14;
+    public static final int INDEX_AWAY_CREST = 15;
     private static final String[] SCORES_COLUMNS = {
             DatabaseContract.FixtureEntry.TABLE_NAME + "." + DatabaseContract.FixtureEntry._ID,
             DatabaseContract.FixtureEntry.DATE_COL,
@@ -56,7 +78,13 @@ class DetailWidgetRemoteViewsFactory implements RemoteViewsService.RemoteViewsFa
             DatabaseContract.FixtureEntry.AWAY_GOALS_COL,
             DatabaseContract.FixtureEntry.MATCH_ID,
             DatabaseContract.FixtureEntry.MATCH_DAY,
-            "T1." + DatabaseContract.TeamEntry.NAME_COL
+            "T1." + DatabaseContract.TeamEntry.NAME_COL,
+            "T1." + DatabaseContract.TeamEntry.ABBREVIATION_COL,
+            "T1." + DatabaseContract.TeamEntry.CREST_URL_COL,
+            "T2." + DatabaseContract.TeamEntry.NAME_COL,
+            "T2." + DatabaseContract.TeamEntry.ABBREVIATION_COL,
+            "T2." + DatabaseContract.TeamEntry.CREST_URL_COL
+
     };
     private static final String LOG_TAG = DetailWidgetRemoteViewsFactory.class.getSimpleName();
     private Context mContext;
@@ -82,7 +110,10 @@ class DetailWidgetRemoteViewsFactory implements RemoteViewsService.RemoteViewsFa
 
         Uri scoreWithDateUri = DatabaseContract.FixtureEntry.buildFixtureWithDate();
 
-        Date currentDate = new Date(System.currentTimeMillis());
+        //Date currentDate = new Date(System.currentTimeMillis());
+        Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.DATE, -1);
+
         SimpleDateFormat formattedDate = new SimpleDateFormat("yyyy-MM-dd");
 
         final long token = Binder.clearCallingIdentity();
@@ -91,7 +122,7 @@ class DetailWidgetRemoteViewsFactory implements RemoteViewsService.RemoteViewsFa
                     scoreWithDateUri,
                     SCORES_COLUMNS,
                     null,
-                    new String[]{formattedDate.format(currentDate)},
+                    new String[]{formattedDate.format(cal.getTime())},
                     null);
         } finally {
             Binder.restoreCallingIdentity(token);
@@ -128,12 +159,6 @@ class DetailWidgetRemoteViewsFactory implements RemoteViewsService.RemoteViewsFa
         double matchId;
         int homeIcon, awayIcon;
 
-        homeTeam = mCursor.getString(INDEX_HOME);
-        homeIcon = Utility.getTeamCrestByTeamName(homeTeam);
-
-        awayTeam = mCursor.getString(INDEX_AWAY);
-        awayIcon = Utility.getTeamCrestByTeamName(awayTeam);
-
         time = mCursor.getString(INDEX_MATCH_TIME);
         homeGoals = mCursor.getInt(INDEX_HOME_GOALS) > 0 ? String.valueOf(mCursor.getInt(INDEX_HOME_GOALS)) : "";
         awayGoals = mCursor.getInt(INDEX_AWAY_GOALS) > 0 ? String.valueOf(mCursor.getInt(INDEX_AWAY_GOALS)) : "";
@@ -145,8 +170,16 @@ class DetailWidgetRemoteViewsFactory implements RemoteViewsService.RemoteViewsFa
 
         views.setOnClickFillInIntent(R.id.widget_frame, new Intent());
 
-        views.setImageViewResource(R.id.widget_home_icon, homeIcon);
-        views.setImageViewResource(R.id.widget_away_icon, awayIcon);
+        String homeTeamName = mCursor.getString(INDEX_HOME_NAME);
+        String homeCrestUrl = mCursor.getString(INDEX_HOME_CREST);
+        String awayTeamName = mCursor.getString(INDEX_AWAY_NAME);
+        String awayCrestUrl = mCursor.getString(INDEX_AWAY_CREST);
+
+        setTeamCrest(views, R.id.widget_home_icon, homeTeamName, homeCrestUrl);
+        setTeamCrest(views, R.id.widget_away_icon, awayTeamName, awayCrestUrl);
+
+        //views.setImageViewResource(R.id.widget_home_icon, homeIcon);
+        //views.setImageViewResource(R.id.widget_away_icon, awayIcon);
 
         /*
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1) {
@@ -184,5 +217,74 @@ class DetailWidgetRemoteViewsFactory implements RemoteViewsService.RemoteViewsFa
     private void setRemoteContentDescription(RemoteViews views, int viewId, String description) {
         views.setContentDescription(viewId, description);
     }
+
+    private void setTeamCrest(RemoteViews views, int viewId, String teamName, String crestUrl) {
+        Bitmap crestBitmap = null;
+
+        final RemoteViews fViews = views;
+        final int fViewId = viewId;
+
+        try {
+            if (crestUrl.endsWith(".svg")) {
+                // TODO: How to convert svg files to Bitmap
+
+                GenericRequestBuilder<Uri, InputStream, SVG, PictureDrawable> requestBuilder;
+
+                requestBuilder = Glide.with(mContext)
+                        .using(Glide.buildStreamModelLoader(Uri.class, mContext), InputStream.class)
+                        .from(Uri.class)
+                        .as(SVG.class)
+                        .transcode(new SvgDrawableTranscoder(), PictureDrawable.class)
+                        .sourceEncoder(new StreamEncoder())
+                        .cacheDecoder(new FileToStreamDecoder<SVG>(new SvgDecoder()))
+                        .decoder(new SvgDecoder())
+                        .placeholder(R.drawable.ic_launcher)
+                        .error(R.drawable.no_icon);
+                //.listener(new SvgSoftwareLayerSetter<Uri>());
+
+                requestBuilder
+                        .diskCacheStrategy(DiskCacheStrategy.SOURCE)
+                                // SVG cannot be serialized so it's not worth to cache it
+                        .load(Uri.parse(crestUrl)).listener(new RequestListener<Uri, PictureDrawable>() {
+                    @Override
+                    public boolean onException(Exception e, Uri model, Target<PictureDrawable> target, boolean isFirstResource) {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean onResourceReady(PictureDrawable resource, Uri model, Target<PictureDrawable> target, boolean isFromMemoryCache, boolean isFirstResource) {
+
+                        Bitmap bitmap = Bitmap.createBitmap(resource.getIntrinsicWidth(), resource.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
+                        Canvas canvas = new Canvas(bitmap);
+                        canvas.drawPicture(resource.getPicture());
+
+                        fViews.setImageViewBitmap(fViewId, bitmap);
+
+                        return false;
+                    }
+                });
+                //.into(view);
+
+                /*
+                int crestResource = Utility.getTeamCrestByTeamName(teamName);
+
+                views.setImageViewResource(viewId, crestResource);
+                */
+            } else {
+                crestBitmap = Glide.with(mContext)
+                        .load(crestUrl)
+                        .asBitmap()
+                        .error(R.drawable.ic_launcher)
+                        .into(Target.SIZE_ORIGINAL, Target.SIZE_ORIGINAL)
+                        .get();
+
+                views.setImageViewBitmap(viewId, crestBitmap);
+            }
+
+        } catch (InterruptedException | ExecutionException e) {
+            Log.e(LOG_TAG, "Error retrieving large icon from " + crestUrl, e);
+        }
+    }
+
 }
 

@@ -39,6 +39,29 @@ public class ScoresProvider extends ContentProvider {
             DatabaseContract.LeagueEntry.LEAGUE_ID + " = ?";
 
     private static ScoresDBHelper mOpenHelper;
+
+    static {
+        sFixtureQueryBuilder = new SQLiteQueryBuilder();
+
+        //This is an inner join which looks like
+        // Songs
+        // LEFT JOIN Artists ON Songs.artist_id = Artists._id
+        // LEFT JOIN Albums ON Songs.album_id = Albums._id
+
+        sFixtureQueryBuilder.setTables(
+                DatabaseContract.FixtureEntry.TABLE_NAME + " LEFT JOIN " +
+                        DatabaseContract.TeamEntry.TABLE_NAME +
+                        " AS T1 ON " + DatabaseContract.FixtureEntry.TABLE_NAME +
+                        "." + DatabaseContract.FixtureEntry.HOME_COL +
+                        " = T1." + DatabaseContract.TeamEntry.TEAM_ID + " LEFT JOIN " +
+                        DatabaseContract.TeamEntry.TABLE_NAME +
+                        " AS T2 ON " + DatabaseContract.FixtureEntry.TABLE_NAME +
+                        "." + DatabaseContract.FixtureEntry.AWAY_COL +
+                        " = T2." + DatabaseContract.TeamEntry.TEAM_ID
+        );
+
+    }
+
     private UriMatcher muriMatcher = buildUriMatcher();
 
     static UriMatcher buildUriMatcher() {
@@ -74,28 +97,6 @@ public class ScoresProvider extends ContentProvider {
                 TEAMS_WITH_ID);
 
         return sUriMatcher;
-    }
-
-    static{
-        sFixtureQueryBuilder = new SQLiteQueryBuilder();
-
-        //This is an inner join which looks like
-        // Songs
-        // LEFT JOIN Artists ON Songs.artist_id = Artists._id
-        // LEFT JOIN Albums ON Songs.album_id = Albums._id
-
-        sFixtureQueryBuilder.setTables(
-                DatabaseContract.FixtureEntry.TABLE_NAME + " LEFT JOIN " +
-                        DatabaseContract.TeamEntry.TABLE_NAME +
-                        " AS T1 ON " + DatabaseContract.FixtureEntry.TABLE_NAME +
-                        "." + DatabaseContract.FixtureEntry.HOME_COL +
-                        " = T1." + DatabaseContract.TeamEntry._ID + " LEFT JOIN " +
-                        DatabaseContract.TeamEntry.TABLE_NAME +
-                        " AS T2 ON " + DatabaseContract.FixtureEntry.TABLE_NAME +
-                        "." + DatabaseContract.FixtureEntry.AWAY_COL +
-                        " = T2." + DatabaseContract.TeamEntry._ID
-        );
-
     }
 
     @Override

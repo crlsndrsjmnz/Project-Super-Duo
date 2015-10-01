@@ -11,7 +11,6 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.support.annotation.NonNull;
-import android.util.Log;
 import android.widget.RemoteViews;
 
 import barqsoft.footballscores.MainActivity;
@@ -66,8 +65,6 @@ public class DetailWidgetProvider extends AppWidgetProvider {
     @Override
     public void onReceive(Context context, Intent intent) {
         super.onReceive(context, intent);
-
-        Log.d(LOG_TAG, ">>>>>>>>>>>>>>>>>>>>>>> DetailWidgetProvider:onReceive " + intent.getAction());
 
         if (ACTION_DATA_UPDATED.equals(intent.getAction())) {
             AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
