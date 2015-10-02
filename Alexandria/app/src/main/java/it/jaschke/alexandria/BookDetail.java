@@ -26,6 +26,15 @@ import it.jaschke.alexandria.services.BookService;
 
 public class BookDetail extends Fragment implements LoaderManager.LoaderCallbacks<Cursor> {
 
+    public static final int INDEX_TITLE = 0;
+    public static final int INDEX_SUBTITLE = 1;
+    public static final int INDEX_IMAGE_URL = 2;
+    public static final int INDEX_DESC = 3;
+    public static final int INDEX_AUTHOR = 4;
+    public static final int INDEX_CATEGORY = 5;
+
+    private static final String LOG_TAG = BookDetail.class.getSimpleName();
+
     public static final String EAN_KEY = "EAN";
     private final int LOADER_ID = 10;
     private View rootView;
@@ -33,7 +42,15 @@ public class BookDetail extends Fragment implements LoaderManager.LoaderCallback
     private String bookTitle;
     private ShareActionProvider shareActionProvider;
 
-    public BookDetail(){
+    TextView mTvBookTitle;
+    TextView mTvBookSubTitle;
+    TextView mTvBookDescription;
+    TextView mTvBookAuthor;
+    TextView mTvBookCategories;
+
+    ImageView mIvBookCover;
+
+    public BookDetail() {
     }
 
     @Override
@@ -63,6 +80,15 @@ public class BookDetail extends Fragment implements LoaderManager.LoaderCallback
                 getActivity().getSupportFragmentManager().popBackStack();
             }
         });
+
+        mTvBookTitle = (TextView) rootView.findViewById(R.id.fullBookTitle);
+        mTvBookSubTitle = (TextView) rootView.findViewById(R.id.fullBookSubTitle);
+        mTvBookDescription = (TextView) rootView.findViewById(R.id.fullBookDesc);
+        mTvBookAuthor = (TextView) rootView.findViewById(R.id.authors);
+        mTvBookCategories = (TextView) rootView.findViewById(R.id.categories);
+
+        mIvBookCover = (ImageView) rootView.findViewById(R.id.fullBookCover);
+
         return rootView;
     }
 
@@ -73,6 +99,11 @@ public class BookDetail extends Fragment implements LoaderManager.LoaderCallback
 
         MenuItem menuItem = menu.findItem(R.id.action_share);
         shareActionProvider = (ShareActionProvider) MenuItemCompat.getActionProvider(menuItem);
+
+        Intent shareIntent = createShareForecastIntent();
+        if (shareActionProvider != null && shareIntent != null) {
+            shareActionProvider.setShareIntent(shareIntent);
+        }
     }
 
     @Override
@@ -89,45 +120,47 @@ public class BookDetail extends Fragment implements LoaderManager.LoaderCallback
 
     @Override
     public void onLoadFinished(android.support.v4.content.Loader<Cursor> loader, Cursor data) {
-        if (!data.moveToFirst()) {
+        if (data == null || !data.moveToFirst())
             return;
+
+        bookTitle = data.getString(INDEX_TITLE);
+        mTvBookTitle.setText(bookTitle);
+
+        Intent shareIntent = createShareForecastIntent();
+        if (shareActionProvider != null && shareIntent != null) {
+            shareActionProvider.setShareIntent(shareIntent);
         }
 
-        bookTitle = data.getString(data.getColumnIndex(AlexandriaContract.BookEntry.TITLE));
-        ((TextView) rootView.findViewById(R.id.fullBookTitle)).setText(bookTitle);
+        String bookSubTitle = data.getString(INDEX_SUBTITLE);
+        mTvBookSubTitle.setText(bookSubTitle);
 
-        Intent shareIntent = new Intent(Intent.ACTION_SEND);
-        shareIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
-        shareIntent.setType("text/plain");
-        shareIntent.putExtra(Intent.EXTRA_TEXT, getString(R.string.share_text)+bookTitle);
-        shareActionProvider.setShareIntent(shareIntent);
+        String desc = data.getString(INDEX_DESC);
+        mTvBookDescription.setText(desc);
 
-        String bookSubTitle = data.getString(data.getColumnIndex(AlexandriaContract.BookEntry.SUBTITLE));
-        ((TextView) rootView.findViewById(R.id.fullBookSubTitle)).setText(bookSubTitle);
+        String authors = data.getString(INDEX_AUTHOR);
+        if (authors != null && authors.length() > 0) {
+            String[] authorsArr = authors.split(",");
+            mTvBookAuthor.setLines(authorsArr.length);
+            mTvBookAuthor.setText(authors.replace(",", "\n"));
+        } else {
+            mTvBookAuthor.setText("");
+        }
 
-        String desc = data.getString(data.getColumnIndex(AlexandriaContract.BookEntry.DESC));
-        ((TextView) rootView.findViewById(R.id.fullBookDesc)).setText(desc);
-
-        String authors = data.getString(data.getColumnIndex(AlexandriaContract.AuthorEntry.AUTHOR));
-        String[] authorsArr = authors.split(",");
-        ((TextView) rootView.findViewById(R.id.authors)).setLines(authorsArr.length);
-        ((TextView) rootView.findViewById(R.id.authors)).setText(authors.replace(",","\n"));
-        String imgUrl = data.getString(data.getColumnIndex(AlexandriaContract.BookEntry.IMAGE_URL));
-        if(Patterns.WEB_URL.matcher(imgUrl).matches()){
+        String imgUrl = data.getString(INDEX_IMAGE_URL);
+        if (Patterns.WEB_URL.matcher(imgUrl).matches()) {
             Glide.with(getActivity())
                     .load(imgUrl)
                     .error(R.drawable.ic_launcher)
                     .crossFade()
-                    .into((ImageView) rootView.findViewById(R.id.fullBookCover));
+                    .into(mIvBookCover);
         }
 
-        String categories = data.getString(data.getColumnIndex(AlexandriaContract.CategoryEntry.CATEGORY));
-        ((TextView) rootView.findViewById(R.id.categories)).setText(categories);
+        String categories = data.getString(INDEX_CATEGORY);
+        mTvBookCategories.setText(categories);
 
-        if(rootView.findViewById(R.id.right_container)!=null){
+        if (rootView.findViewById(R.id.right_container) != null) {
             rootView.findViewById(R.id.backButton).setVisibility(View.INVISIBLE);
         }
-
     }
 
     @Override
@@ -138,8 +171,19 @@ public class BookDetail extends Fragment implements LoaderManager.LoaderCallback
     @Override
     public void onPause() {
         super.onDestroyView();
-        if(MainActivity.IS_TABLET && rootView.findViewById(R.id.right_container)==null){
+        if (MainActivity.IS_TABLET && rootView.findViewById(R.id.right_container) == null) {
             getActivity().getSupportFragmentManager().popBackStack();
         }
+    }
+
+    private Intent createShareForecastIntent() {
+        if (bookTitle != null && !bookTitle.isEmpty()) {
+            Intent shareIntent = new Intent(Intent.ACTION_SEND);
+            shareIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
+            shareIntent.setType("text/plain");
+            shareIntent.putExtra(Intent.EXTRA_TEXT, getString(R.string.share_text) + bookTitle);
+            return shareIntent;
+        }
+        return null;
     }
 }

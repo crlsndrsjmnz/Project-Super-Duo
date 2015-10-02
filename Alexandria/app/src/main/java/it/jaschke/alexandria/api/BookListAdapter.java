@@ -13,13 +13,18 @@ import android.widget.TextView;
 import com.bumptech.glide.Glide;
 
 import it.jaschke.alexandria.R;
-import it.jaschke.alexandria.data.AlexandriaContract;
 
 /**
  * Created by saj on 11/01/15.
  */
 public class BookListAdapter extends CursorAdapter {
 
+    public static final int INDEX_TITLE = 0;
+    public static final int INDEX_SUBTITLE = 1;
+    public static final int INDEX_IMAGE_URL = 2;
+    public static final int INDEX_DESC = 3;
+    public static final int INDEX_AUTHOR = 4;
+    public static final int INDEX_CATEGORY = 5;
 
     public BookListAdapter(Context context, Cursor c, int flags) {
         super(context, c, flags);
@@ -30,7 +35,7 @@ public class BookListAdapter extends CursorAdapter {
 
         ViewHolder viewHolder = (ViewHolder) view.getTag();
 
-        String imgUrl = cursor.getString(cursor.getColumnIndex(AlexandriaContract.BookEntry.IMAGE_URL));
+        String imgUrl = cursor.getString(INDEX_IMAGE_URL);
 
         Glide.with(context)
                 .load(imgUrl)
@@ -38,10 +43,10 @@ public class BookListAdapter extends CursorAdapter {
                 .crossFade()
                 .into(viewHolder.bookCover);
 
-        String bookTitle = cursor.getString(cursor.getColumnIndex(AlexandriaContract.BookEntry.TITLE));
+        String bookTitle = cursor.getString(INDEX_TITLE);
         viewHolder.bookTitle.setText(bookTitle);
 
-        String bookSubTitle = cursor.getString(cursor.getColumnIndex(AlexandriaContract.BookEntry.SUBTITLE));
+        String bookSubTitle = cursor.getString(INDEX_SUBTITLE);
         viewHolder.bookSubTitle.setText(bookSubTitle);
     }
 

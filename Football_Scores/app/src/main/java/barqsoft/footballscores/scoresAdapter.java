@@ -70,15 +70,8 @@ public class scoresAdapter extends CursorAdapter {
     public void bindView(View view, final Context context, Cursor cursor) {
         final ViewHolder mHolder = (ViewHolder) view.getTag();
 
-        String columns = "";
-        for (String colName : cursor.getColumnNames()) {
-            columns = columns + colName + ", ";
-        }
-
-        String values = "";
-        for (int i = 0; i < cursor.getColumnCount(); i++) {
-            values = values + cursor.getString(i) + ", ";
-        }
+        String matchDay = "";
+        String matchLeague = "";
 
         String homeTeamName = cursor.getString(COL_HOME_TEAM_NAME);
         String awayTeamName = cursor.getString(COL_AWAY_TEAM_NAME);
@@ -103,11 +96,17 @@ public class scoresAdapter extends CursorAdapter {
         if (mHolder.match_id == detail_match_id) {
             container.addView(v, 0, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT
                     , ViewGroup.LayoutParams.MATCH_PARENT));
-            TextView match_day = (TextView) v.findViewById(R.id.matchday_textview);
-            match_day.setText(Utility.getMatchDay(context, cursor.getInt(COL_MATCHDAY),
-                    cursor.getInt(COL_LEAGUE)));
-            TextView league = (TextView) v.findViewById(R.id.league_textview);
-            league.setText(Utility.getLeague(context, cursor.getInt(COL_LEAGUE)));
+
+            matchDay = Utility.getMatchDay(context, cursor.getInt(COL_MATCHDAY),
+                    cursor.getInt(COL_LEAGUE));
+            TextView tvMatchDay = (TextView) v.findViewById(R.id.matchday_textview);
+            tvMatchDay.setText(matchDay);
+            tvMatchDay.setContentDescription(matchDay);
+
+            matchLeague = Utility.getLeague(context, cursor.getInt(COL_LEAGUE));
+            TextView tvLeague = (TextView) v.findViewById(R.id.league_textview);
+            tvLeague.setText(matchLeague);
+            tvLeague.setContentDescription(matchLeague);
 
             Button share_button = (Button) v.findViewById(R.id.share_button);
             share_button.setContentDescription(context.getString(R.string.share_text));
